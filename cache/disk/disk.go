@@ -452,22 +452,14 @@ func (c *Cache) Get(kind cache.EntryKind, hash string) (io.ReadCloser, int64, er
 	// Before returning, we have to either commit the item and set
 	// its size, or remove the item from the LRU.
 	defer func() {
-		c.mu.Lock()
+		if !shouldCommit {
+			c.mu.Lock()
 
-		if shouldCommit {
-			// Overwrite the placeholder inserted by availableOrTryProxy.
-			// Call Add instead of updating the entry directly, so we
-			// update the currentSize value.
-			c.lru.Add(key, &lruItem{
-				size:      foundSize,
-				committed: true,
-			})
-		} else {
 			// Remove the placeholder.
 			c.lru.Remove(key)
-		}
 
-		c.mu.Unlock()
+			c.mu.Unlock()
+		}
 
 		if !shouldCommit && tmpFileCreated {
 			os.Remove(tmpFilePath) // No need to check the error.
@@ -483,6 +475,18 @@ func (c *Cache) Get(kind cache.EntryKind, hash string) (io.ReadCloser, int64, er
 	if err != nil || r == nil {
 		return nil, -1, err
 	}
+
+	c.mu.Lock()
+	// Overwrite the placeholder inserted by availableOrTryProxy.
+	// Call Add instead of updating the entry directly, so we
+	// update the currentSize value.
+	// This must be done before the the file is materialized to disk
+	// to ensure eviction kicks-in and frees some space up if it is necessary
+	c.lru.Add(key, &lruItem{
+		size:      foundSize,
+		committed: true,
+	})
+	c.mu.Unlock()
 
 	f, err = os.Create(tmpFilePath)
 	if err != nil {
