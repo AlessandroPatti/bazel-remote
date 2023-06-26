@@ -129,6 +129,11 @@ func (s *grpcServer) BatchUpdateBlobs(ctx context.Context,
 		s.accessLogger.Printf("GRPC CAS PUT %s OK", req.Digest.Hash)
 	}
 
+	for _, response := range resp.Responses {
+		if response.Status.GetCode() != int32(codes.OK) {
+			return &resp, grpc_status.Error(codes.Internal, "Error while serving BatchUpdateBlobs")
+		}
+	}
 	return &resp, nil
 }
 
@@ -263,7 +268,17 @@ func (s *grpcServer) BatchReadBlobs(ctx context.Context,
 		resp.Responses = append(resp.Responses, s.getBlobResponse(ctx, digest, allowZstd))
 	}
 
-	return &resp, nil
+	var err error = nil
+	for _, response := range resp.Responses {
+		switch response.Status.Code {
+		case int32(codes.NotFound):
+			err = grpc_status.Error(codes.NotFound, "Not Found while serving BatchReadBlobs")
+		case int32(codes.OK):
+		default:
+			return &resp, grpc_status.Error(codes.Internal, "Error while serving BatchReadBlobs")
+		}
+	}
+	return &resp, err
 }
 
 func (s *grpcServer) GetTree(in *pb.GetTreeRequest,

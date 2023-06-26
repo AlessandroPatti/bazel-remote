@@ -58,12 +58,11 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 
 	for _, q := range req.GetQualifiers() {
 		if q == nil {
-			return &asset.FetchBlobResponse{
-				Status: &status.Status{
-					Code:    int32(codes.InvalidArgument),
-					Message: "unexpected nil qualifier in FetchBlobRequest",
-				},
-			}, nil
+			st := &status.Status{
+				Code:    int32(codes.InvalidArgument),
+				Message: "unexpected nil qualifier in FetchBlobRequest",
+			}
+			return &asset.FetchBlobResponse{Status: st}, grpc_status.Error(codes.Code(st.Code), st.Message)
 		}
 
 		if q.Name == "checksum.sri" && strings.HasPrefix(q.Value, "sha256-") {
@@ -129,9 +128,8 @@ func (s *grpcServer) FetchBlob(ctx context.Context, req *asset.FetchBlobRequest)
 		// Not a simple file. Not yet handled...
 	}
 
-	return &asset.FetchBlobResponse{
-		Status: &status.Status{Code: int32(codes.NotFound)},
-	}, nil
+	st := status.Status{Code: int32(codes.NotFound)}
+	return &asset.FetchBlobResponse{Status: &st}, grpc_status.Error(codes.Code(st.Code), st.Message)
 }
 
 func (s *grpcServer) fetchItem(ctx context.Context, uri string, expectedHash string) (bool, string, int64) {
