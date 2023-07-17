@@ -1,0 +1,19 @@
+load("@io_bazel_rules_go//go:def.bzl", "go_library")
+
+go_library(
+    name = "go_default_library",
+    srcs = [
+        "peerproxy.go",
+        "peers.go",
+        "updater.go",
+    ],
+    importpath = "github.com/buchgr/bazel-remote/v2/cache/peerproxy",
+    visibility = ["//visibility:public"],
+    deps = [
+        "//cache:go_default_library",
+        "//utils/backendproxy:go_default_library",
+        "@com_github_golang_groupcache//consistenthash:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus:go_default_library",
+        "@com_github_prometheus_client_golang//prometheus/promauto:go_default_library",
+    ],
+)

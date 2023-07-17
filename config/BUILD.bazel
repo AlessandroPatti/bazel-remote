@@ -17,6 +17,7 @@ go_library(
         "//cache/azblobproxy:go_default_library",
         "//cache/gcsproxy:go_default_library",
         "//cache/httpproxy:go_default_library",
+        "//cache/peerproxy:go_default_library",
         "//cache/s3proxy:go_default_library",
         "@com_github_azure_azure_sdk_for_go_sdk_azcore//:go_default_library",
         "@com_github_azure_azure_sdk_for_go_sdk_azidentity//:go_default_library",

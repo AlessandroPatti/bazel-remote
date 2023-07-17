@@ -8,6 +8,7 @@ import (
 	"log"
 	"math"
 	"net"
+	"net/url"
 	"os"
 	"sort"
 	"strconv"
@@ -32,6 +33,16 @@ type GoogleCloudStorageConfig struct {
 // HTTPBackendConfig stores the configuration for a HTTP proxy backend.
 type HTTPBackendConfig struct {
 	BaseURL string `yaml:"url"`
+}
+
+// PeerConfig stores the configuration for a Peer proxy backend.
+type PeerConfig struct {
+	List     []string      `yaml:"list"`
+	SRV      string        `yaml:"srv"`
+	Interval time.Duration `yaml:"interval"`
+	Self     string        `yaml:"self"`
+	KeyFile  string        `yaml:"key_file"`
+	CertFile string        `yaml:"cert_file"`
 }
 
 // Config holds the top-level configuration for bazel-remote.
@@ -67,6 +78,7 @@ type Config struct {
 	LogTimezone                 string                    `yaml:"log_timezone"`
 	MaxBlobSize                 int64                     `yaml:"max_blob_size"`
 	MaxProxyBlobSize            int64                     `yaml:"max_proxy_blob_size"`
+	Peers                       *PeerConfig               `yaml:"peers"`
 
 	// Fields that are created by combinations of the flags above.
 	ProxyBackend cache.Proxy
@@ -120,7 +132,8 @@ func newFromArgs(dir string, maxSize int, storageMode string, zstdImplementation
 	accessLogLevel string,
 	logTimezone string,
 	maxBlobSize int64,
-	maxProxyBlobSize int64) (*Config, error) {
+	maxProxyBlobSize int64,
+	peers *PeerConfig) (*Config, error) {
 
 	c := Config{
 		HTTPAddress:                 httpAddress,
@@ -154,6 +167,7 @@ func newFromArgs(dir string, maxSize int, storageMode string, zstdImplementation
 		LogTimezone:                 logTimezone,
 		MaxBlobSize:                 maxBlobSize,
 		MaxProxyBlobSize:            maxProxyBlobSize,
+		Peers:                       peers,
 	}
 
 	err := validateConfig(&c)
@@ -394,6 +408,59 @@ func validateConfig(c *Config) error {
 		return errors.New("'log_timezone' must be set to either \"UTC\", \"local\" or \"none\"")
 	}
 
+	if c.Peers != nil {
+		if c.Peers.Self == "" {
+			return errors.New("--peers.self must be provided if peers proxy is enabled")
+		}
+
+		if c.Peers.List == nil && c.Peers.SRV == "" {
+			return errors.New("One of --peers.list and --peers.srv must be provided if peers proxy is enabled")
+		}
+
+		if c.Peers.List != nil && c.Peers.SRV != "" {
+			return errors.New("Only one of --peers.list and --peers.srv can be used.")
+		}
+
+		if c.Peers.List != nil && c.Peers.Interval != 0 {
+			return errors.New("Cannot use --peers.interval with --peers.list.")
+		}
+
+		if c.Peers.KeyFile != "" || c.Peers.CertFile != "" {
+			if c.Peers.KeyFile == "" || c.Peers.CertFile == "" {
+				return errors.New("To use mTLS with the peers proxy, both a key and a certifacte must be provided")
+			}
+		}
+
+		if c.HTTPAddress == "" {
+			return errors.New("HTTP must be enabled if 'peers' is passed")
+		}
+
+		if c.StorageMode != "uncompressed" {
+			return errors.New("--peers does not yet support compressed storage mode")
+		}
+
+		for _, s := range [][]string{{c.Peers.Self}, c.Peers.List} {
+			for _, peer := range s {
+				url, err := url.Parse(peer)
+				if err != nil {
+					return err
+				}
+				switch url.Scheme {
+				case "http":
+					if c.TLSCertFile != "" || c.TLSKeyFile != "" {
+						return errors.New("If TLS is enabled, peers must use https")
+					}
+				case "https":
+					if c.TLSCertFile == "" || c.TLSKeyFile == "" {
+						return errors.New("If TLS is disabled, peers cannot use https")
+					}
+				default:
+					return fmt.Errorf("Unknown peer protocol %s", url.Scheme)
+				}
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -499,6 +566,23 @@ func get(ctx *cli.Context) (*Config, error) {
 		}
 	}
 
+	var peers *PeerConfig
+	if ctx.String("peers.self") != "" {
+		var list []string
+		if ctx.String("peers.list") != "" {
+			list = strings.Split(ctx.String("peers.list"), ",")
+		}
+
+		peers = &PeerConfig{
+			List:     list,
+			SRV:      ctx.String("peers.srv"),
+			Interval: ctx.Duration("peers.interval"),
+			Self:     ctx.String("peers.self"),
+			KeyFile:  ctx.String("peers.key_file"),
+			CertFile: ctx.String("peers.cert_file"),
+		}
+	}
+
 	return newFromArgs(
 		ctx.String("dir"),
 		ctx.Int("max_size"),
@@ -530,5 +614,6 @@ func get(ctx *cli.Context) (*Config, error) {
 		ctx.String("log_timezone"),
 		ctx.Int64("max_blob_size"),
 		ctx.Int64("max_proxy_blob_size"),
+		peers,
 	)
 }

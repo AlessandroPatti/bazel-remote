@@ -396,5 +396,41 @@ func GetCliFlags() []cli.Flag {
 			DefaultText: "UTC, ie use UTC timezone",
 			EnvVars:     []string{"BAZEL_REMOTE_LOG_TIMEZONE"},
 		},
+		&cli.StringFlag{
+			Name:    "peers.list",
+			Value:   "",
+			Usage:   "The base urls of peer caches.",
+			EnvVars: []string{"BAZEL_REMOTE_PEERS_LIST"},
+		},
+		&cli.StringFlag{
+			Name:    "peers.self",
+			Value:   "",
+			Usage:   "The base url of the current cache as seen by the other peers.",
+			EnvVars: []string{"BAZEL_REMOTE_PEERS_SELF"},
+		},
+		&cli.StringFlag{
+			Name:    "peers.key_file",
+			Value:   "",
+			Usage:   "Path to the key used to autheticate with the proxy backend. Enables mTLS.",
+			EnvVars: []string{"BAZEL_REMOTE_PEERS_KEY_FILE"},
+		},
+		&cli.StringFlag{
+			Name:    "peers.cert_file",
+			Value:   "",
+			Usage:   "Path to the cert used to autheticate with the proxy backend. Enables mTLS.",
+			EnvVars: []string{"BAZEL_REMOTE_PEERS_CERT_FILE"},
+		},
+		&cli.StringFlag{
+			Name:    "peers.srv",
+			Value:   "",
+			Usage:   "SRV record prefix for peer discovery.",
+			EnvVars: []string{"BAZEL_REMOTE_PEERS_SRV"},
+		},
+		&cli.StringFlag{
+			Name:    "peers.interval",
+			Value:   "",
+			Usage:   "The interval at which the peers list is updated.",
+			EnvVars: []string{"BAZEL_REMOTE_PEERS_INTERVAL"},
+		},
 	}
 }
