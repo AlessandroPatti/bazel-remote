@@ -234,9 +234,9 @@ func newFixture(t *testing.T, proxy cache.Proxy, storageMode string) *fixture {
 	diskCache, err := disk.New(
 		testutils.TempDir(t),
 		8*1024*1024,
+		logger,
 		disk.WithProxyBackend(proxy),
-		disk.WithStorageMode(storageMode),
-		disk.WithAccessLogger(logger))
+		disk.WithStorageMode(storageMode))
 	if err != nil {
 		t.Fatal(err)
 	}

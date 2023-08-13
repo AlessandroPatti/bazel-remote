@@ -2,7 +2,6 @@ package disk
 
 import (
 	"fmt"
-	"log"
 	"math"
 	"os"
 	"path"
@@ -32,7 +31,7 @@ const lowercaseDSStoreFile = ".ds_store"
 
 // New returns a new instance of a filesystem-based cache rooted at `dir`,
 // with a maximum size of `maxSizeBytes` bytes and `opts` Options set.
-func New(dir string, maxSizeBytes int64, opts ...Option) (Cache, error) {
+func New(dir string, maxSizeBytes int64, logger cache.Logger, opts ...Option) (Cache, error) {
 
 	err := os.MkdirAll(dir, os.ModePerm)
 	if err != nil {
@@ -56,7 +55,7 @@ func New(dir string, maxSizeBytes int64, opts ...Option) (Cache, error) {
 		// lots of files, so allow fewer than linux.
 		semaphoreWeight = 3000
 	}
-	log.Printf("Limiting concurrent file removals to %d\n", semaphoreWeight)
+	logger.Printf("Limiting concurrent file removals to %d", semaphoreWeight)
 
 	zi, err := zstdimpl.Get("go")
 	if err != nil {
@@ -71,8 +70,8 @@ func New(dir string, maxSizeBytes int64, opts ...Option) (Cache, error) {
 		zstd:             zi,
 		maxBlobSize:      math.MaxInt64,
 		maxProxyBlobSize: math.MaxInt64,
-
-		fileRemovalSem: semaphore.NewWeighted(semaphoreWeight),
+		accessLogger:     logger,
+		fileRemovalSem:   semaphore.NewWeighted(semaphoreWeight),
 
 		gaugeCacheAge: prometheus.NewGauge(prometheus.GaugeOpts{
 			Name: "bazel_remote_disk_cache_longest_item_idle_time_seconds",
@@ -110,11 +109,11 @@ func New(dir string, maxSizeBytes int64, opts ...Option) (Cache, error) {
 		}
 	}
 
-	err = c.migrateDirectories()
+	err = c.migrateDirectories(logger)
 	if err != nil {
 		return nil, fmt.Errorf("Attempting to migrate the old directory structure failed: %w", err)
 	}
-	err = c.loadExistingFiles(maxSizeBytes)
+	err = c.loadExistingFiles(maxSizeBytes, logger)
 	if err != nil {
 		return nil, fmt.Errorf("Loading of existing cache entries failed due to error: %w", err)
 	}
@@ -128,23 +127,23 @@ func New(dir string, maxSizeBytes int64, opts ...Option) (Cache, error) {
 	return cc.metrics, nil
 }
 
-func (c *diskCache) migrateDirectories() error {
-	err := migrateDirectory(c.dir, cache.AC)
+func (c *diskCache) migrateDirectories(logger cache.Logger) error {
+	err := migrateDirectory(c.dir, cache.AC, logger)
 	if err != nil {
 		return err
 	}
-	err = migrateDirectory(c.dir, cache.CAS)
+	err = migrateDirectory(c.dir, cache.CAS, logger)
 	if err != nil {
 		return err
 	}
-	err = migrateDirectory(c.dir, cache.RAW)
+	err = migrateDirectory(c.dir, cache.RAW, logger)
 	if err != nil {
 		return err
 	}
 	return nil
 }
 
-func migrateDirectory(baseDir string, kind cache.EntryKind) error {
+func migrateDirectory(baseDir string, kind cache.EntryKind, logger cache.Logger) error {
 	sourceDir := path.Join(baseDir, kind.String())
 
 	_, err := os.Stat(sourceDir)
@@ -152,7 +151,7 @@ func migrateDirectory(baseDir string, kind cache.EntryKind) error {
 		return nil
 	}
 
-	log.Println("Migrating files (if any) to new directory structure:", sourceDir)
+	logger.Printf("Migrating files (if any) to new directory structure: %s", sourceDir)
 
 	listing, err := os.ReadDir(sourceDir)
 	if err != nil {
@@ -185,13 +184,13 @@ func migrateDirectory(baseDir string, kind cache.EntryKind) error {
 				if item.IsDir() {
 					if !v1DirRegex.MatchString(oldName) {
 						// Warn about non-v1 subdirectories.
-						log.Println("Warning: unexpected directory", oldNamePath)
+						logger.Printf("Warning: unexpected directory %s", oldNamePath)
 					}
 
 					destDir := filepath.Join(targetDir, oldName[:2])
 					err := migrateV1Subdir(oldNamePath, destDir, kind)
 					if err != nil {
-						log.Printf("Warning: failed to read subdir %q: %s",
+						logger.Printf("Warning: failed to read subdir %q: %s",
 							oldNamePath, err)
 						continue
 					}
@@ -200,12 +199,12 @@ func migrateDirectory(baseDir string, kind cache.EntryKind) error {
 				}
 
 				if !item.Type().IsRegular() {
-					log.Println("Warning: skipping non-regular file:", oldNamePath)
+					logger.Printf("Warning: skipping non-regular file: %s", oldNamePath)
 					continue
 				}
 
 				if !validate.HashKeyRegex.MatchString(oldName) {
-					log.Println("Warning: skipping unexpected file:", oldNamePath)
+					logger.Printf("Warning: skipping unexpected file: %s", oldNamePath)
 					continue
 				}
 
@@ -234,10 +233,10 @@ func migrateDirectory(baseDir string, kind cache.EntryKind) error {
 	for _, item := range listing {
 		select {
 		case itemChan <- item:
-			log.Printf("Migrating %s item(s) %d/%d, %s\n", sourceDir, i, numItems, item.Name())
+			logger.Printf("Migrating %s item(s) %d/%d, %s", sourceDir, i, numItems, item.Name())
 			i++
 		case err = <-errChan:
-			log.Println("Encountered error while migrating files:", err)
+			logger.Printf("Encountered error while migrating files: %s", err.Error())
 			close(itemChan)
 		}
 	}
@@ -344,7 +343,7 @@ func (r scanResult) Swap(i, j int) {
 	r.metadata[i], r.metadata[j] = r.metadata[j], r.metadata[i]
 }
 
-func (c *diskCache) scanDir() (scanResult, error) {
+func (c *diskCache) scanDir(logger cache.Logger) (scanResult, error) {
 
 	numWorkers := runtime.NumCPU()
 	if numWorkers < 4 {
@@ -352,7 +351,7 @@ func (c *diskCache) scanDir() (scanResult, error) {
 	} else if numWorkers > 16 {
 		numWorkers = 16 // Consider increasing the upper limit after more testing.
 	}
-	log.Println("Scanning cache directory with", numWorkers, "goroutines")
+	logger.Printf("Scanning cache directory with %d goroutines", numWorkers)
 
 	dc := make(chan string, numWorkers) // Feed directory names to workers.
 	dcClosed := false
@@ -561,16 +560,16 @@ func (c *diskCache) scanDir() (scanResult, error) {
 // loadExistingFiles lists all files in the cache directory, and adds them to the
 // LRU index so that they can be served. Files are sorted by access time first,
 // so that the eviction behavior is preserved across server restarts.
-func (c *diskCache) loadExistingFiles(maxSizeBytes int64) error {
-	log.Printf("Loading existing files in %s.\n", c.dir)
+func (c *diskCache) loadExistingFiles(maxSizeBytes int64, logger cache.Logger) error {
+	logger.Printf("Loading existing files in %s.", c.dir)
 
-	result, err := c.scanDir()
+	result, err := c.scanDir(logger)
 	if err != nil {
-		log.Printf("Failed to scan cache dir: %s", err.Error())
+		logger.Printf("Failed to scan cache dir: %s", err.Error())
 		return err
 	}
 
-	log.Println("Sorting cache files by atime.")
+	logger.Printf("Sorting cache files by atime.")
 	sort.Sort(result)
 
 	// The eviction callback deletes the file from disk.
@@ -582,7 +581,7 @@ func (c *diskCache) loadExistingFiles(maxSizeBytes int64) error {
 		go c.removeFile(f)
 	}
 
-	log.Println("Building LRU index.")
+	logger.Printf("Building LRU index.")
 
 	c.lru = NewSizedLRU(maxSizeBytes, onEvict, len(result.item))
 
@@ -596,7 +595,7 @@ func (c *diskCache) loadExistingFiles(maxSizeBytes int64) error {
 		}
 	}
 
-	log.Println("Finished loading disk cache files.")
+	logger.Printf("Finished loading disk cache files.")
 
 	return nil
 }

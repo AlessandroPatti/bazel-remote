@@ -140,7 +140,6 @@ func run(ctx *cli.Context) error {
 		disk.WithZstdImplementation(c.ZstdImplementation),
 		disk.WithMaxBlobSize(c.MaxBlobSize),
 		disk.WithProxyMaxBlobSize(c.MaxProxyBlobSize),
-		disk.WithAccessLogger(c.AccessLogger),
 	}
 	if c.ProxyBackend != nil {
 		opts = append(opts, disk.WithProxyBackend(c.ProxyBackend))
@@ -149,7 +148,7 @@ func run(ctx *cli.Context) error {
 		opts = append(opts, disk.WithEndpointMetrics())
 	}
 
-	diskCache, err := disk.New(c.Dir, int64(c.MaxSize)*1024*1024*1024, opts...)
+	diskCache, err := disk.New(c.Dir, int64(c.MaxSize)*1024*1024*1024, c.AccessLogger, opts...)
 	if err != nil {
 		log.Fatal(err)
 	}

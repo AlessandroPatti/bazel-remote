@@ -74,7 +74,7 @@ type diskCache struct {
 	zstd             zstdimpl.ZstdImpl
 	maxBlobSize      int64
 	maxProxyBlobSize int64
-	accessLogger     *log.Logger
+	accessLogger     cache.Logger
 	containsQueue    chan proxyCheck
 
 	// Limit the number of simultaneous file removals.

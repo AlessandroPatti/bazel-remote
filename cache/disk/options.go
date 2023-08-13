@@ -2,7 +2,6 @@ package disk
 
 import (
 	"fmt"
-	"log"
 
 	"github.com/buchgr/bazel-remote/v2/cache"
 	"github.com/buchgr/bazel-remote/v2/cache/disk/casblob"
@@ -73,13 +72,6 @@ func WithProxyMaxBlobSize(maxProxyBlobSize int64) Option {
 		}
 
 		c.diskCache.maxProxyBlobSize = maxProxyBlobSize
-		return nil
-	}
-}
-
-func WithAccessLogger(logger *log.Logger) Option {
-	return func(c *CacheConfig) error {
-		c.diskCache.accessLogger = logger
 		return nil
 	}
 }

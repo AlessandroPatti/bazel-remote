@@ -79,7 +79,7 @@ func grpcTestSetupInternal(t *testing.T, mangleACKeys bool) (tc grpcTestFixture)
 	// Add some overhead for likely CAS blob storage expansion.
 	cacheSize := int64(10 * maxChunkSize * 2)
 
-	diskCache, err := disk.New(dir, cacheSize, disk.WithAccessLogger(testutils.NewSilentLogger()))
+	diskCache, err := disk.New(dir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		fmt.Println("Test setup failed")
 		os.Exit(1)

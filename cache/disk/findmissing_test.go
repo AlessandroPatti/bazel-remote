@@ -194,7 +194,7 @@ func TestFindMissingCasBlobsWithProxy(t *testing.T) {
 	proxyCacheDir := tempDir(t)
 	defer os.RemoveAll(proxyCacheDir)
 
-	cacheForProxy, err := New(proxyCacheDir, 10*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	cacheForProxy, err := New(proxyCacheDir, 10*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -204,7 +204,7 @@ func TestFindMissingCasBlobsWithProxy(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testCache, err := New(cacheDir, 10*1024, WithProxyBackend(proxy), WithAccessLogger(testutils.NewSilentLogger()))
+	testCache, err := New(cacheDir, 10*1024, testutils.NewSilentLogger(), WithProxyBackend(proxy))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -251,7 +251,7 @@ func TestFindMissingCasBlobsWithProxyFailFast(t *testing.T) {
 	proxyCacheDir := tempDir(t)
 	defer os.RemoveAll(proxyCacheDir)
 
-	cacheForProxy, err := New(proxyCacheDir, 10*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	cacheForProxy, err := New(proxyCacheDir, 10*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -262,7 +262,7 @@ func TestFindMissingCasBlobsWithProxyFailFast(t *testing.T) {
 	}
 
 	// Explicitly avoid using WithProxyBackEnd, as we want to control the workers.
-	testCacheI, err := New(cacheDir, 10*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, 10*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -310,7 +310,7 @@ func TestFindMissingCasBlobsWithProxyFailFastNoneMissing(t *testing.T) {
 	proxyCacheDir := tempDir(t)
 	defer os.RemoveAll(proxyCacheDir)
 
-	cacheForProxy, err := New(proxyCacheDir, 40*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	cacheForProxy, err := New(proxyCacheDir, 40*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -321,7 +321,7 @@ func TestFindMissingCasBlobsWithProxyFailFastNoneMissing(t *testing.T) {
 	}
 
 	// Explicitly avoid using WithProxyBackEnd, as we want to control the workers.
-	testCacheI, err := New(cacheDir, 40*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, 40*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -384,7 +384,7 @@ func TestFindMissingCasBlobsWithProxyFailFastMaxProxyBlobSize(t *testing.T) {
 	proxyCacheDir := tempDir(t)
 	defer os.RemoveAll(proxyCacheDir)
 
-	cacheForProxy, err := New(proxyCacheDir, 10*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	cacheForProxy, err := New(proxyCacheDir, 10*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -395,7 +395,7 @@ func TestFindMissingCasBlobsWithProxyFailFastMaxProxyBlobSize(t *testing.T) {
 	}
 
 	// Explicitly avoid using WithProxyBackEnd, as we want to control the workers.
-	testCacheI, err := New(cacheDir, 10*1024, WithAccessLogger(testutils.NewSilentLogger()), WithProxyMaxBlobSize(300))
+	testCacheI, err := New(cacheDir, 10*1024, testutils.NewSilentLogger(), WithProxyMaxBlobSize(300))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -451,7 +451,7 @@ func TestFindMissingCasBlobsWithProxyMaxProxyBlobSize(t *testing.T) {
 	proxyCacheDir := tempDir(t)
 	defer os.RemoveAll(proxyCacheDir)
 
-	cacheForProxy, err := New(proxyCacheDir, 10*1024, WithAccessLogger(testutils.NewSilentLogger()))
+	cacheForProxy, err := New(proxyCacheDir, 10*1024, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -461,7 +461,7 @@ func TestFindMissingCasBlobsWithProxyMaxProxyBlobSize(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	testCache, err := New(cacheDir, 10*1024, WithProxyBackend(proxy), WithAccessLogger(testutils.NewSilentLogger()), WithProxyMaxBlobSize(500))
+	testCache, err := New(cacheDir, 10*1024, testutils.NewSilentLogger(), WithProxyBackend(proxy), WithProxyMaxBlobSize(500))
 	if err != nil {
 		t.Fatal(err)
 	}

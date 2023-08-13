@@ -56,7 +56,7 @@ func TestCacheBasics(t *testing.T) {
 	// Add some overhead for likely CAS blob storage expansion.
 	cacheSize := int64(itemSize*2 + BlockSize)
 
-	testCacheI, err := New(cacheDir, cacheSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -103,7 +103,7 @@ func TestCachePutWrongSize(t *testing.T) {
 
 	cacheDir := tempDir(t)
 	defer os.RemoveAll(cacheDir)
-	testCache, err := New(cacheDir, BlockSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCache, err := New(cacheDir, BlockSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -139,7 +139,7 @@ func TestCacheGetContainsWrongSize(t *testing.T) {
 
 	cacheDir := tempDir(t)
 	defer os.RemoveAll(cacheDir)
-	testCache, err := New(cacheDir, BlockSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCache, err := New(cacheDir, BlockSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -179,7 +179,7 @@ func TestCacheGetContainsWrongSizeWithProxy(t *testing.T) {
 
 	cacheDir := tempDir(t)
 	defer os.RemoveAll(cacheDir)
-	testCacheI, err := New(cacheDir, BlockSize, WithProxyBackend(new(proxyStub)), WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, BlockSize, testutils.NewSilentLogger(), WithProxyBackend(new(proxyStub)))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -332,7 +332,7 @@ func TestOverwrite(t *testing.T) {
 	cacheDir := tempDir(t)
 	defer os.RemoveAll(cacheDir)
 
-	testCacheI, err := New(cacheDir, BlockSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, BlockSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -447,7 +447,7 @@ func TestCacheExistingFiles(t *testing.T) {
 	// Add some overhead for likely CAS blob storage expansion.
 	const cacheSize = BlockSize * 5
 
-	testCacheI, err := New(cacheDir, cacheSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -506,7 +506,7 @@ func TestCacheBlobTooLarge(t *testing.T) {
 
 	cacheDir := tempDir(t)
 	defer os.RemoveAll(cacheDir)
-	testCacheI, err := New(cacheDir, BlockSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, BlockSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -536,7 +536,7 @@ func TestCacheCorruptedCASBlob(t *testing.T) {
 
 	cacheDir := tempDir(t)
 	defer os.RemoveAll(cacheDir)
-	testCacheI, err := New(cacheDir, BlockSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, BlockSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -610,7 +610,7 @@ func TestMigrateFromOldDirectoryStructure(t *testing.T) {
 	// Add some overhead for likely CAS blob storage expansion.
 	const cacheSize = 2560*2 + BlockSize*2
 
-	testCacheI, err := New(cacheDir, cacheSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -723,7 +723,7 @@ func TestLoadExistingEntries(t *testing.T) {
 	// Add some overhead for likely CAS blob storage expansion.
 	cacheSize := int64((blobSize + BlockSize) * numBlobs * 2)
 
-	testCacheI, err := New(cacheDir, cacheSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -770,7 +770,7 @@ func TestDistinctKeyspaces(t *testing.T) {
 	// Add some overhead for likely CAS blob storage expansion.
 	cacheSize := int64((blobSize+BlockSize)*3) * 2
 
-	testCacheI, err := New(cacheDir, cacheSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -897,7 +897,7 @@ func TestHttpProxyBackend(t *testing.T) {
 	// Add some overhead for likely CAS blob storage expansion.
 	cacheSize := int64(1024*10) * 2
 
-	testCacheI, err := New(cacheDir, cacheSize, WithProxyBackend(proxy), WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, cacheSize, testutils.NewSilentLogger(), WithProxyBackend(proxy))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -937,7 +937,7 @@ func TestHttpProxyBackend(t *testing.T) {
 	cacheDir = testutils.TempDir(t)
 	defer os.RemoveAll(cacheDir)
 
-	testCacheI, err = New(cacheDir, cacheSize, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err = New(cacheDir, cacheSize, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1019,7 +1019,7 @@ func TestGetValidatedActionResult(t *testing.T) {
 	cacheDir := testutils.TempDir(t)
 	defer os.RemoveAll(cacheDir)
 
-	testCacheI, err := New(cacheDir, 1024*32, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, 1024*32, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1195,7 +1195,7 @@ func TestGetWithOffset(t *testing.T) {
 
 	const blobSize = 2048 + 256
 
-	testCacheI, err := New(cacheDir, blobSize*2, WithAccessLogger(testutils.NewSilentLogger()))
+	testCacheI, err := New(cacheDir, blobSize*2, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -1264,7 +1264,7 @@ func TestMetricsUnvalidatedAC(t *testing.T) {
 	cacheSize := int64(100000)
 
 	testCacheI, err := New(cacheDir, cacheSize,
-		WithAccessLogger(testutils.NewSilentLogger()),
+		testutils.NewSilentLogger(),
 		WithEndpointMetrics())
 	if err != nil {
 		t.Fatal(err)
@@ -1374,7 +1374,7 @@ func TestMetricsValidatedAC(t *testing.T) {
 	cacheSize := int64(100000)
 
 	testCacheI, err := New(cacheDir, cacheSize,
-		WithAccessLogger(testutils.NewSilentLogger()),
+		testutils.NewSilentLogger(),
 		WithEndpointMetrics())
 	if err != nil {
 		t.Fatal(err)
@@ -1472,7 +1472,7 @@ func TestCacheDirLostAndFound(t *testing.T) {
 		}
 	}
 
-	_, err = New(cacheDir, 4096, WithAccessLogger(testutils.NewSilentLogger()))
+	_, err = New(cacheDir, 4096, testutils.NewSilentLogger())
 	if err != nil {
 		t.Fatal(err)
 	}
