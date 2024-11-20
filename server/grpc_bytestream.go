@@ -146,21 +146,26 @@ func (s *grpcServer) Read(req *bytestream.ReadRequest,
 		n, err := rc.Read(buf)
 
 		if n > 0 {
+			l := n
 			if limitedSend {
 				if (sendLimitRemaining - int64(n)) < 0 {
-					msg := fmt.Sprintf("GRPC BYTESTREAM READ FAILED: %s READ LIMIT EXCEEDED", hash)
-					s.accessLogger.Printf(msg)
-					return status.Error(codes.OutOfRange, msg)
+					l = int(sendLimitRemaining)
 				}
 				sendLimitRemaining -= int64(n)
 			}
 
-			chunkResp.Data = buf[:n]
+			chunkResp.Data = buf[:l]
 			sendErr := resp.Send(&chunkResp)
 			if sendErr != nil {
 				msg := fmt.Sprintf("GRPC BYTESTREAM READ FAILED TO SEND RESPONSE: %s %v", hash, sendErr)
 				s.accessLogger.Printf(msg)
 				return status.Error(codes.Unknown, msg)
+			}
+
+			if l != n {
+				msg := fmt.Sprintf("GRPC BYTESTREAM READ FAILED: %s READ LIMIT EXCEEDED", hash)
+				s.accessLogger.Printf(msg)
+				return status.Error(codes.OutOfRange, msg)
 			}
 		}
 
